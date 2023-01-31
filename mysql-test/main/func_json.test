@@ -2049,16 +2049,6 @@ SET @schema_array= '{
                        "prefixItems": [
                                        { "type": "number", "maximum": 10, "minimum":3},
                                        { "type": "string" }
-                                       ]
-                    }';
-SELECT JSON_SCHEMA_VALID(@schema_array, '[5, "string1",2]');
-SELECT JSON_SCHEMA_VALID(@schema_array, '[2, "string1",2]');
-
-SET @schema_array= '{
-                       "type": "array",
-                       "prefixItems": [
-                                       { "type": "number", "maximum": 10, "minimum":3},
-                                       { "type": "string" }
                                        ],
                         "items":true
                     }';

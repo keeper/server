@@ -4751,7 +4751,7 @@ longlong Item_func_json_schema_valid::val_int()
     Json_schema_keyword* curr_keyword= NULL;
     while ((curr_keyword=it++))
     {
-      if (curr_keyword->validate(&ve))
+      if (curr_keyword->validate(&ve, NULL, NULL, true))
       {
         is_valid= 0;
         break;
