@@ -147,7 +147,7 @@ static const uchar to_upper_gbk[]=
 };
 
 
-static MY_CASEFOLD_CHARACTER cA2[256]=
+static const MY_CASEFOLD_CHARACTER cA2[256]=
 {
   {0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}, /* xx00 */
   {0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},
@@ -351,7 +351,7 @@ static MY_CASEFOLD_CHARACTER cA2[256]=
   {0xA2FF,0xA2FF}
 };
 
-static MY_CASEFOLD_CHARACTER cA3[256]=
+static const MY_CASEFOLD_CHARACTER cA3[256]=
 {
   {0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}, /* xx00 */
   {0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},
@@ -556,7 +556,7 @@ static MY_CASEFOLD_CHARACTER cA3[256]=
 };
 
 
-static MY_CASEFOLD_CHARACTER cA6[256]=
+static const MY_CASEFOLD_CHARACTER cA6[256]=
 {
   {0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}, /* xx00 */
   {0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},
@@ -761,7 +761,7 @@ static MY_CASEFOLD_CHARACTER cA6[256]=
 };
 
 
-static MY_CASEFOLD_CHARACTER cA7[256]=
+static const MY_CASEFOLD_CHARACTER cA7[256]=
 {
   {0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}, /* xx00 */
   {0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},
@@ -966,7 +966,7 @@ static MY_CASEFOLD_CHARACTER cA7[256]=
 };
 
 
-static MY_CASEFOLD_CHARACTER *my_casefold_pages_gbk[256]=
+static const MY_CASEFOLD_CHARACTER *my_casefold_pages_gbk[256]=
 {
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, /* 0 */
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1006,7 +1006,8 @@ static MY_CASEFOLD_CHARACTER *my_casefold_pages_gbk[256]=
 static MY_CASEFOLD_INFO my_casefold_gbk=
 {
   0xFFFF,
-  my_casefold_pages_gbk
+  my_casefold_pages_gbk,
+  NULL /* ws */
 };
 
 
@@ -10780,7 +10781,6 @@ struct charset_info_st my_charset_gbk_chinese_ci=
     NULL,		/* tab_to_uni   */
     NULL,		/* tab_from_uni */
     &my_casefold_gbk,   /* casefold     */
-    NULL,               /* caseinfo     */
     NULL,		/* state_map    */
     NULL,		/* ident_map    */
     1,			/* strxfrm_multiply */
@@ -10811,7 +10811,6 @@ struct charset_info_st my_charset_gbk_bin=
     NULL,		/* tab_to_uni   */
     NULL,		/* tab_from_uni */
     &my_casefold_gbk,   /* casefold     */
-    NULL,               /* caseinfo     */
     NULL,		/* state_map    */
     NULL,		/* ident_map    */
     1,			/* strxfrm_multiply */
@@ -10843,7 +10842,6 @@ struct charset_info_st my_charset_gbk_chinese_nopad_ci=
     NULL,               /* tab_to_uni       */
     NULL,               /* tab_from_uni     */
     &my_casefold_gbk,   /* casefold     */
-    NULL,               /* caseinfo     */
     NULL,               /* state_map        */
     NULL,               /* ident_map        */
     1,                  /* strxfrm_multiply */
@@ -10874,7 +10872,6 @@ struct charset_info_st my_charset_gbk_nopad_bin=
     NULL,               /* tab_to_uni       */
     NULL,               /* tab_from_uni     */
     &my_casefold_gbk,   /* casefold     */
-    NULL,               /* caseinfo     */
     NULL,               /* state_map        */
     NULL,               /* ident_map        */
     1,                  /* strxfrm_multiply */
