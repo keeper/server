@@ -2609,24 +2609,27 @@ sequence_defs:
         ;
 
 sequence_def:
-          AS int_type
+          AS int_type field_options
           {
             if (unlikely(Lex->create_info.seq_create_info->used_fields &
                          seq_field_used_as))
               my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "AS"));
+            if ($3 & ZEROFILL_FLAG)
+                my_yyabort_error((ER_NOT_SUPPORTED_YET, MYF(0), "ZEROFILL as a sequence value type option"));
             Lex->create_info.seq_create_info->value_type = $2->field_type();
+            Lex->create_info.seq_create_info->is_unsigned = $3 & UNSIGNED_FLAG ? true : false;
+            Lex->create_info.seq_create_info->used_fields|= seq_field_used_as;
           }
         | MINVALUE_SYM opt_equal ulonglong_num
           {
             if (unlikely(Lex->create_info.seq_create_info->used_fields &
                          seq_field_used_min_value))
               my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "MINVALUE"));
-            if ($3 > (ulonglong) LONGLONG_MAX)
-              Lex->create_info.seq_create_info->min_value= LONGLONG_MAX;
+            if ($3 > LONGLONG_MAX)
+                Lex->create_info.seq_create_info->min_value_from_parser= Longlong_hybrid($3, true);
             else
-              Lex->create_info.seq_create_info->min_value= (longlong) $3;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_used_min_value;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_specified_min_value;
+                Lex->create_info.seq_create_info->min_value_from_parser= Longlong_hybrid((longlong) $3, false);
+            Lex->create_info.seq_create_info->used_fields|= seq_field_used_min_value | seq_field_specified_min_value;
           }
         | MINVALUE_SYM opt_equal minus_ulonglong_num
           {
@@ -2634,29 +2637,26 @@ sequence_def:
                          seq_field_used_min_value))
               my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "MINVALUE"));
               if ($3 > (ulonglong) LONGLONG_MAX)
-                  Lex->create_info.seq_create_info->min_value= LONGLONG_MIN;
+                  Lex->create_info.seq_create_info->min_value_from_parser= Longlong_hybrid(LONGLONG_MIN, false);
               else
-                  Lex->create_info.seq_create_info->min_value= - (longlong) $3;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_used_min_value;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_specified_min_value;
+                  Lex->create_info.seq_create_info->min_value_from_parser= Longlong_hybrid(- (longlong) $3, false);
+            Lex->create_info.seq_create_info->used_fields|= seq_field_used_min_value | seq_field_specified_min_value;
           }
         | MINVALUE_SYM opt_equal DECIMAL_NUM
           {
             if (unlikely(Lex->create_info.seq_create_info->used_fields &
                          seq_field_used_min_value))
               my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "MINVALUE"));
-            Lex->create_info.seq_create_info->min_value= LONGLONG_MAX;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_used_min_value;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_specified_min_value;
+            Lex->create_info.seq_create_info->min_value_from_parser= Longlong_hybrid(ULONGLONG_MAX, true);
+            Lex->create_info.seq_create_info->used_fields|= seq_field_used_min_value | seq_field_specified_min_value;
           }
         | MINVALUE_SYM opt_equal '-' DECIMAL_NUM
           {
             if (unlikely(Lex->create_info.seq_create_info->used_fields &
                          seq_field_used_min_value))
               my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "MINVALUE"));
-            Lex->create_info.seq_create_info->min_value= LONGLONG_MIN;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_used_min_value;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_specified_min_value;
+            Lex->create_info.seq_create_info->min_value_from_parser= Longlong_hybrid(LONGLONG_MIN, false);
+            Lex->create_info.seq_create_info->used_fields|= seq_field_used_min_value | seq_field_specified_min_value;
           }
         | NO_SYM MINVALUE_SYM
           {
@@ -2676,11 +2676,10 @@ sequence_def:
                          seq_field_used_max_value))
               my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "MAXVALUE"));
             if ($3 > (ulonglong) LONGLONG_MAX)
-              Lex->create_info.seq_create_info->max_value= LONGLONG_MAX;
+                Lex->create_info.seq_create_info->max_value_from_parser= Longlong_hybrid($3, true);
             else
-              Lex->create_info.seq_create_info->max_value= (longlong) $3;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_used_max_value;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_specified_max_value;
+                Lex->create_info.seq_create_info->max_value_from_parser= Longlong_hybrid((longlong) $3, false);
+            Lex->create_info.seq_create_info->used_fields|= seq_field_used_max_value | seq_field_specified_max_value;
           }
         | MAXVALUE_SYM opt_equal minus_ulonglong_num
           {
@@ -2688,29 +2687,26 @@ sequence_def:
                         seq_field_used_max_value))
             my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "MAXVALUE"));
             if ($3 > (ulonglong) LONGLONG_MAX)
-              Lex->create_info.seq_create_info->max_value= LONGLONG_MIN;
+                Lex->create_info.seq_create_info->max_value_from_parser= Longlong_hybrid(LONGLONG_MIN, false);
             else
-              Lex->create_info.seq_create_info->max_value= - (longlong) $3;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_used_max_value;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_specified_max_value;
+                Lex->create_info.seq_create_info->max_value_from_parser= Longlong_hybrid(- (longlong) $3, false);
+            Lex->create_info.seq_create_info->used_fields|= seq_field_used_max_value | seq_field_specified_max_value;
           }
         | MAXVALUE_SYM opt_equal DECIMAL_NUM
           {
             if (unlikely(Lex->create_info.seq_create_info->used_fields &
                          seq_field_used_max_value))
               my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "MAXVALUE"));
-            Lex->create_info.seq_create_info->max_value= LONGLONG_MAX;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_used_max_value;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_specified_max_value;
+            Lex->create_info.seq_create_info->max_value_from_parser= Longlong_hybrid(ULONGLONG_MAX, true);
+            Lex->create_info.seq_create_info->used_fields|= seq_field_used_max_value | seq_field_specified_max_value;
           }
         | MAXVALUE_SYM opt_equal '-' DECIMAL_NUM
           {
             if (unlikely(Lex->create_info.seq_create_info->used_fields &
                          seq_field_used_max_value))
               my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "MAXVALUE"));
-            Lex->create_info.seq_create_info->max_value= LONGLONG_MIN;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_used_max_value;
-            Lex->create_info.seq_create_info->used_fields|= seq_field_specified_max_value;
+            Lex->create_info.seq_create_info->max_value_from_parser= Longlong_hybrid(LONGLONG_MIN, false);
+            Lex->create_info.seq_create_info->used_fields|= seq_field_used_max_value | seq_field_specified_max_value;
           }
         | NO_SYM MAXVALUE_SYM
           {
@@ -2724,12 +2720,26 @@ sequence_def:
               my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "MAXVALUE"));
             Lex->create_info.seq_create_info->used_fields|= seq_field_used_max_value;
           }
-        | START_SYM opt_with longlong_num
+        | START_SYM opt_with ulonglong_num
           {
             if (unlikely(Lex->create_info.seq_create_info->used_fields &
                          seq_field_used_start))
               my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "START"));
-            Lex->create_info.seq_create_info->start= $3;
+            if ($3 > LONGLONG_MAX)
+                Lex->create_info.seq_create_info->start_from_parser= Longlong_hybrid($3, true);
+            else
+                Lex->create_info.seq_create_info->start_from_parser= Longlong_hybrid((longlong) $3, false);
+            Lex->create_info.seq_create_info->used_fields|= seq_field_used_start;
+          }
+        | START_SYM opt_with minus_ulonglong_num
+          {
+            if (unlikely(Lex->create_info.seq_create_info->used_fields &
+                         seq_field_used_start))
+              my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "START"));
+            if ($3 > ((ulonglong) LONGLONG_MAX) + 1)
+                thd->parse_error(ER_SYNTAX_ERROR, "START");
+            else
+                Lex->create_info.seq_create_info->start_from_parser= Longlong_hybrid(- (longlong) $3, false);
             Lex->create_info.seq_create_info->used_fields|= seq_field_used_start;
           }
         | INCREMENT_SYM opt_by longlong_num
@@ -2784,7 +2794,7 @@ sequence_def:
               my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "RESTART"));
             Lex->create_info.seq_create_info->used_fields|= seq_field_used_restart;
           }
-        | RESTART_SYM opt_with longlong_num
+        | RESTART_SYM opt_with ulonglong_num
           {
             if (unlikely(Lex->sql_command != SQLCOM_ALTER_SEQUENCE))
             {
@@ -2794,7 +2804,26 @@ sequence_def:
             if (unlikely(Lex->create_info.seq_create_info->used_fields &
                          seq_field_used_restart))
               my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "RESTART"));
-            Lex->create_info.seq_create_info->restart= $3;
+            if ($3 > LONGLONG_MAX)
+                Lex->create_info.seq_create_info->restart_from_parser= Longlong_hybrid($3, true);
+            else
+                Lex->create_info.seq_create_info->restart_from_parser= Longlong_hybrid((longlong) $3, false);
+            Lex->create_info.seq_create_info->used_fields|= seq_field_used_restart | seq_field_used_restart_value;
+          }
+        | RESTART_SYM opt_with minus_ulonglong_num
+          {
+            if (unlikely(Lex->sql_command != SQLCOM_ALTER_SEQUENCE))
+            {
+              thd->parse_error(ER_SYNTAX_ERROR, "RESTART");
+              MYSQL_YYABORT;
+            }
+            if (unlikely(Lex->create_info.seq_create_info->used_fields &
+                         seq_field_used_restart))
+              my_yyabort_error((ER_DUP_ARGUMENT, MYF(0), "RESTART"));
+            if ($3 > ((ulonglong) LONGLONG_MAX) + 1)
+                thd->parse_error(ER_SYNTAX_ERROR, "RESTART");
+            else
+                Lex->create_info.seq_create_info->restart_from_parser= Longlong_hybrid(- (longlong) $3, false);
             Lex->create_info.seq_create_info->used_fields|= seq_field_used_restart | seq_field_used_restart_value;
           }
         ;
