@@ -397,6 +397,25 @@ static dberr_t srv_undo_delete_old_tablespaces()
   return DB_SUCCESS;
 }
 
+/** In case of undo tablespace reinitialization, update the
+max transaction id in TRX_RSEG_MAX_TRX_ID field of system
+rollback segment header page
+@param	mtr	mini-transaction
+@return error code or DB_SUCCESS */
+static dberr_t trx_rseg_update_max_trx_id(mtr_t *mtr)
+{
+  dberr_t err;
+  buf_block_t *rseg_header= trx_sys.rseg_array[0].get(mtr, &err);
+  if (UNIV_UNLIKELY(!rseg_header))
+    return err;
+  if (UNIV_UNLIKELY(mach_read_from_4(TRX_RSEG + TRX_RSEG_FORMAT
+                                     + rseg_header->page.frame)))
+    trx_rseg_format_upgrade(rseg_header, mtr);
+  mtr->write<8>(*rseg_header, TRX_RSEG + TRX_RSEG_MAX_TRX_ID
+                + rseg_header->page.frame, trx_sys.get_max_trx_id() - 1);
+  return DB_SUCCESS;
+}
+
 /** Recreate the undo log tablespaces */
 static dberr_t srv_undo_tablespaces_reinit()
 {
@@ -525,6 +544,8 @@ static dberr_t srv_undo_tablespaces_reinit()
 
   /* Re-create the new undo tablespaces */
   err= srv_undo_tablespaces_init(true, &mtr);
+  if (err == DB_SUCCESS)
+    err= trx_rseg_update_max_trx_id(&mtr);
 func_exit:
   mtr.commit();
 
