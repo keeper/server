@@ -175,5 +175,77 @@ void init_show_explain_psi_keys(void);
 #define init_show_explain_psi_keys() /* no-op */
 #endif
 
+
+class Notifiable_work_zone
+{
+  static constexpr uint OWNER_BIT = 4;
+  static constexpr uint ENTER_BIT = 2;
+  static constexpr uint EVENT_BIT = 1;
+  std::atomic<uint> state{0};
+public:
+
+  bool try_enter_owner()
+  {
+    uint old_state= state.fetch_or(ENTER_BIT | OWNER_BIT);
+    return !(old_state & ENTER_BIT);
+  }
+
+  bool try_enter()
+  {
+    // assert mutex owner (lock_thd_kill)
+    uint old_state= state.fetch_or(ENTER_BIT);
+    return !(old_state & ENTER_BIT);
+  }
+  bool has_event()
+  {
+    return state.load() & EVENT_BIT;
+  }
+
+  struct Leave_result
+  {
+    bool success: 1;
+    bool owner: 1;
+  };
+  Leave_result try_leave()
+  {
+    uint old_state= state.load();
+    DBUG_ASSERT(old_state & ENTER_BIT);
+
+    if (unlikely(old_state & EVENT_BIT))
+    {
+      state.fetch_and(~EVENT_BIT);
+      return {false, false}; // one can reveal ownership only after leave
+    }
+
+    bool success= state.compare_exchange_weak(old_state, 0);
+    bool owner= old_state & OWNER_BIT;
+    return {success, owner};
+
+  }
+  void discard()
+  {
+    uint old_state= state.fetch_and(~EVENT_BIT);
+    DBUG_ASSERT(old_state & ENTER_BIT);
+  }
+  bool notify()
+  {
+    uint old_state= state.load();
+    bool done;
+    do
+    {
+      done= true;
+      if ((old_state & ~OWNER_BIT) == ENTER_BIT)
+        done= state.compare_exchange_weak(old_state, old_state | EVENT_BIT);
+    } while (!done);
+
+    return old_state & ENTER_BIT; // true if there was someone to notify
+  }
+  void set_owner()
+  {
+    uint old_state= state.fetch_or(OWNER_BIT);
+    DBUG_ASSERT(old_state & ENTER_BIT);
+  }
+};
+
 #endif //SQL_MY_APC_INCLUDED
 
