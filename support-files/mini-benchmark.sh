@@ -28,6 +28,8 @@ display_help() {
   echo "                     generate flamegraphs automatically"
   echo "  --cpu-limit        upper limit on the number of CPU cycles (in billions) used for the benchmark"
   echo "                     default: 750"
+  echo "  --socket           path to MariaDB socket"
+  echo "                     default: /tmp/mysql.sock"
   echo "  -h, --help         display this help and exit"
 }
 
@@ -54,6 +56,7 @@ BENCHMARK_NAME='mini-benchmark'
 THREADS='1 2 4 8 16'
 DURATION=60
 WORKLOAD='oltp_read_write'
+SOCKET_PATH='/tmp/mysql.sock'
 
 # Application paths
 PIDSTAT=/usr/bin/pidstat
@@ -105,6 +108,11 @@ do
     --cpu-limit)
       shift
       CPU_CYCLE_LIMIT=$1
+      shift
+      ;;
+    --socket)
+      shift
+      SOCKET_PATH=$1
       shift
       ;;
     -*)
@@ -243,12 +251,13 @@ renice --priority -20 --pid "$MARIADB_SERVER_PID" || echo "renice failed. Not se
 echo "Set CPU affinity 0 for MariaDB Server process ID $MARIADB_SERVER_PID"
 taskset -cp 0 "$MARIADB_SERVER_PID" || echo "taskset failed. Not setting cpu affinity."
 
-mariadb -e "
+mariadb --socket=$SOCKET_PATH -e "
   CREATE DATABASE IF NOT EXISTS sbtest;
   CREATE USER IF NOT EXISTS sbtest@localhost;
   GRANT ALL PRIVILEGES ON sbtest.* TO sbtest@localhost"
 
-sysbench "$WORKLOAD" prepare --tables=20 --table-size=100000 | tee sysbench-prepare.log
+SYSBENCH_ARG="--mysql-socket=$SOCKET_PATH"
+sysbench "$WORKLOAD" prepare --tables=20 --table-size=100000 $SYSBENCH_ARG | tee sysbench-prepare.log
 sync && sleep 1 # Ensure writes were propagated to disk
 
 # Run benchmark with increasing thread counts. The MariaDB Server will be using
@@ -265,12 +274,12 @@ do
     $PIDSTAT -p $MARIADB_SERVER_PID -d 1 2>&1 > pidstat-$t.log &
   fi
 
-  $PERF_COMMAND $TASKSET_SYSBENCH sysbench "$WORKLOAD" run --threads=$t --time=$DURATION --report-interval=10 2>&1 | tee sysbench-run-$t.log
+  $PERF_COMMAND $TASKSET_SYSBENCH sysbench "$WORKLOAD" run --threads=$t --time=$DURATION --report-interval=10 $SYSBENCH_ARG 2>&1 | tee sysbench-run-$t.log
   sleep 3 && pkill pidstat || true
   io_stat pidstat-$t.log || true
 done
 
-sysbench "$WORKLOAD" cleanup --tables=20 | tee sysbench-cleanup.log
+sysbench "$WORKLOAD" cleanup --tables=20 $SYSBENCH_ARG | tee sysbench-cleanup.log
 
 # Store results from 4 thread run in a Gitlab-CI compatible metrics file
 grep -oE '[a-z]+:[ ]+[0-9.]+' sysbench-run-4.log | sed -r 's/\s+/ /g' | tail -n 15 > metrics.txt
