@@ -513,10 +513,12 @@ mini-benchmark:
     - yum install -y sysbench procps-ng perf flamegraph flamegraph-stackcollapse-perf util-linux dnf-utils
     - /usr/share/mysql/mini-benchmark
     - cp -av */sysbench-run-*.log */metrics.txt .  # Move files one level down so they can be saved as artifacts
+    - cp -av */pidstat-*.log . || true
   artifacts:
     when: always
     paths:
       - sysbench-run-*.log
+      - pidstat-*.log
     reports:
       metrics:
         - metrics.txt

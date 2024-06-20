@@ -31,11 +31,32 @@ display_help() {
   echo "  -h, --help         display this help and exit"
 }
 
+io_stat() {
+  awk 'BEGIN {max_ccwr=0; max_delay=0; count=0;}
+    NR<=3 { next }
+    {
+      count += 1;
+      sum_ccwr += $6;
+      sum_delay += $7;
+      sumsq_ccwr += ($6)^2;
+      sumsq_delay += ($7)^2;
+      max_ccwr = (max_ccwr < $6 ? $6 : max_ccwr);
+      max_delay = (max_delay < $7 ? $7 : max_delay);
+    }
+    END {
+      printf "kB_ccwr/s avg: %f stddev: %f max: %f \n", sum_ccwr/count, sqrt((sumsq_ccwr-sum_ccwr^2/count)/count), max_ccwr;
+      printf "iodelay   avg: %f stddev: %f max: %f \n", sum_delay/count, sqrt((sumsq_delay-sum_delay^2/count)/count), max_delay;
+    }' $1
+}
+
 # Default parameters
 BENCHMARK_NAME='mini-benchmark'
 THREADS='1 2 4 8 16'
 DURATION=60
 WORKLOAD='oltp_read_write'
+
+# Application paths
+PIDSTAT=/usr/bin/pidstat
 
 while :
 do
@@ -115,6 +136,13 @@ if [ ! -e /usr/bin/sysbench ]
 then
   echo "ERROR: Command 'sysbench' missing, please install package 'sysbench'"
   exit 1
+fi
+
+IO_RECORD=true
+if [ ! -e $PIDSTAT ]
+then
+  echo "WARNING: Command '$PIDSTAT' missing, please install package 'sysstat'"
+  IO_RECORD=false
 fi
 
 # If there are multiple processes, assume the last one is the actual server and
@@ -233,7 +261,13 @@ do
   # Prepend command with perf if defined
   # Output stderr to stdout as perf outputs everything in stderr
   # shellcheck disable=SC2086
+  if [ "$IO_RECORD" = true ]; then
+    $PIDSTAT -p $MARIADB_SERVER_PID -d 1 2>&1 > pidstat-$t.log &
+  fi
+
   $PERF_COMMAND $TASKSET_SYSBENCH sysbench "$WORKLOAD" run --threads=$t --time=$DURATION --report-interval=10 2>&1 | tee sysbench-run-$t.log
+  sleep 3 && pkill pidstat || true
+  io_stat pidstat-$t.log || true
 done
 
 sysbench "$WORKLOAD" cleanup --tables=20 | tee sysbench-cleanup.log
