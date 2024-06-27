@@ -61,7 +61,7 @@ int init_events_transactions_history_long(uint events_transactions_history_long_
 {
   events_transactions_history_long_size= events_transactions_history_long_sizing;
   events_transactions_history_long_full= false;
-  events_transactions_history_long_index.m_u32.store(0);
+  events_transactions_history_long_index.m_u32.store(0, std::memory_order_relaxed);
 
   if (events_transactions_history_long_size == 0)
     return 0;
@@ -134,7 +134,7 @@ void insert_events_transactions_history_long(PFS_events_transactions *transactio
 
   assert(events_transactions_history_long_array != NULL);
 
-  uint index= events_transactions_history_long_index.m_u32.fetch_add(1);
+  uint index= events_transactions_history_long_index.m_u32.fetch_add(1, std::memory_order_relaxed);
 
   index= index % events_transactions_history_long_size;
   if (index == 0)
@@ -175,7 +175,7 @@ void reset_events_transactions_history(void)
 /** Reset table EVENTS_TRANSACTIONS_HISTORY_LONG data. */
 void reset_events_transactions_history_long(void)
 {
-  events_transactions_history_long_index.m_u32.store(0);
+  events_transactions_history_long_index.m_u32.store(0, std::memory_order_relaxed);
   events_transactions_history_long_full= false;
 
   PFS_events_transactions *pfs= events_transactions_history_long_array;

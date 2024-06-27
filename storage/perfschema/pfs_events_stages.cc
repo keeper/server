@@ -61,7 +61,7 @@ int init_events_stages_history_long(uint events_stages_history_long_sizing)
 {
   events_stages_history_long_size= events_stages_history_long_sizing;
   events_stages_history_long_full= false;
-  events_stages_history_long_index.m_u32.store(0);
+  events_stages_history_long_index.m_u32.store(0, std::memory_order_relaxed);
 
   if (events_stages_history_long_size == 0)
     return 0;
@@ -134,7 +134,7 @@ void insert_events_stages_history_long(PFS_events_stages *stage)
 
   assert(events_stages_history_long_array != NULL);
 
-  uint index= events_stages_history_long_index.m_u32.fetch_add(1);
+  uint index= events_stages_history_long_index.m_u32.fetch_add(1, std::memory_order_relaxed);
 
   index= index % events_stages_history_long_size;
   if (index == 0)
@@ -175,7 +175,7 @@ void reset_events_stages_history(void)
 /** Reset table EVENTS_STAGES_HISTORY_LONG data. */
 void reset_events_stages_history_long(void)
 {
-  events_stages_history_long_index.m_u32.store(0);
+  events_stages_history_long_index.m_u32.store(0, std::memory_order_relaxed);
   events_stages_history_long_full= false;
 
   PFS_events_stages *pfs= events_stages_history_long_array;

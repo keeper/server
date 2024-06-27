@@ -87,7 +87,7 @@ public:
     if (m_full)
       return NULL;
 
-    monotonic= m_monotonic.m_u32.fetch_add(1);
+    monotonic= m_monotonic.m_u32.fetch_add(1, std::memory_order_relaxed);
     monotonic_max= monotonic + static_cast<uint>(m_max);
 
     while (monotonic < monotonic_max)
@@ -99,7 +99,7 @@ public:
       {
         return pfs;
       }
-      monotonic= m_monotonic.m_u32.fetch_add(1);
+      monotonic= m_monotonic.m_u32.fetch_add(1, std::memory_order_relaxed);
 
     }
 
@@ -518,7 +518,7 @@ public:
 
   ulong get_row_count()
   {
-    ulong page_count= m_max_page_index.m_u32.load();
+    ulong page_count= m_max_page_index.m_u32.load(std::memory_order_relaxed);
 
     return page_count * PFS_PAGE_SIZE;
   }
@@ -555,11 +555,11 @@ public:
     /*
       1: Try to find an available record within the existing pages
     */
-    current_page_count= m_max_page_index.m_u32.load();
+    current_page_count= m_max_page_index.m_u32.load(std::memory_order_relaxed);
 
     if (current_page_count != 0)
     {
-      monotonic= m_monotonic.m_u32.load();
+      monotonic= m_monotonic.m_u32.load(std::memory_order_relaxed);
       monotonic_max= monotonic + current_page_count;
 
       while (monotonic < monotonic_max)
@@ -603,7 +603,7 @@ public:
           counter faster and then move on to the detection of new pages,
           in part 2: below.
         */
-        monotonic= m_monotonic.m_u32.fetch_add(1);
+        monotonic= m_monotonic.m_u32.fetch_add(1, std::memory_order_relaxed);
       };
     }
 
@@ -684,7 +684,7 @@ public:
           my_atomic_storeptr(typed_addr, ptr);
 
           /* Advertise the new page */
-          m_max_page_index.m_u32.fetch_add(1);
+          m_max_page_index.m_u32.fetch_add(1, std::memory_order_relaxed);
         }
 
         pthread_mutex_unlock(& m_critical_section);

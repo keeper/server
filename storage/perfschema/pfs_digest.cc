@@ -76,7 +76,7 @@ int init_digest(const PFS_global_param *param)
   */
   digest_max= param->m_digest_sizing;
   digest_lost= 0;
-  digest_monotonic_index.m_u32.store(1);
+  digest_monotonic_index.m_u32.store(1, std::memory_order_relaxed);
   digest_full= false;
 
   if (digest_max == 0)
@@ -275,7 +275,7 @@ search:
 
   while (++attempts <= digest_max)
   {
-    safe_index= digest_monotonic_index.m_u32.fetch_add(1) % digest_max;
+    safe_index= digest_monotonic_index.m_u32.fetch_add(1, std::memory_order_relaxed) % digest_max;
     if (safe_index == 0)
     {
       /* Record [0] is reserved. */
@@ -407,7 +407,7 @@ void reset_esms_by_digest()
     Reset index which indicates where the next calculated digest information
     to be inserted in statements_digest_stat_array.
   */
-  digest_monotonic_index.m_u32.store(1);
+  digest_monotonic_index.m_u32.store(1, std::memory_order_relaxed);
   digest_full= false;
 }
 

@@ -330,22 +330,22 @@ public:
 
   inline void init_refcount(void)
   {
-    m_refcount.store(1);
+    m_refcount.store(1, std::memory_order_relaxed);
   }
 
   inline int get_refcount(void)
   {
-    return m_refcount.load();
+    return m_refcount.load(std::memory_order_relaxed);
   }
 
   inline void inc_refcount(void)
   {
-    m_refcount.fetch_add(1);
+    m_refcount.fetch_add(1, std::memory_order_relaxed);
   }
 
   inline void dec_refcount(void)
   {
-    m_refcount.fetch_sub(1);
+    m_refcount.fetch_sub(1, std::memory_order_relaxed);
   }
 
   void refresh_setup_object_flags(PFS_thread *thread);

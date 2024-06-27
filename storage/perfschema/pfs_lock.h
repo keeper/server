@@ -119,7 +119,7 @@ struct pfs_lock
   {
     uint32 copy;
 
-    copy= m_version_state.load();
+    copy= m_version_state.load(std::memory_order_relaxed);
 
     return ((copy & STATE_MASK) == PFS_LOCK_FREE);
   }
@@ -129,7 +129,7 @@ struct pfs_lock
   {
     uint32 copy;
 
-    copy= m_version_state.load();
+    copy= m_version_state.load(std::memory_order_relaxed);
 
     return ((copy & STATE_MASK) == PFS_LOCK_ALLOCATED);
   }
@@ -144,7 +144,7 @@ struct pfs_lock
   {
     uint32 old_val;
 
-    old_val= m_version_state.load();
+    old_val= m_version_state.load(std::memory_order_relaxed);
 
     if ((old_val & STATE_MASK) != PFS_LOCK_FREE)
     {
@@ -154,7 +154,7 @@ struct pfs_lock
     uint32 new_val= (old_val & VERSION_MASK) + PFS_LOCK_DIRTY;
     bool pass;
 
-    pass= m_version_state.compare_exchange_strong(old_val, new_val);
+    pass= m_version_state.compare_exchange_strong(old_val, new_val, std::memory_order_relaxed);
 
     if (pass)
     {
@@ -178,7 +178,7 @@ struct pfs_lock
     uint32 new_val= (copy & VERSION_MASK) + PFS_LOCK_DIRTY;
     /* We own the record, no need to use compare and swap. */
 
-    m_version_state.store(new_val);
+    m_version_state.store(new_val, std::memory_order_relaxed);
 
     copy_ptr->m_version_state= new_val;
   }
@@ -195,7 +195,7 @@ struct pfs_lock
     /* Increment the version, set the ALLOCATED state */
     uint32 new_val= (copy->m_version_state & VERSION_MASK) + VERSION_INC + PFS_LOCK_ALLOCATED;
 
-    m_version_state.store(new_val);
+    m_version_state.store(new_val, std::memory_order_relaxed);
   }
 
   /**
@@ -210,7 +210,7 @@ struct pfs_lock
     /* Increment the version, set the ALLOCATED state */
     uint32 new_val= (copy & VERSION_MASK) + VERSION_INC + PFS_LOCK_ALLOCATED;
 
-    m_version_state.store(new_val);
+    m_version_state.store(new_val, std::memory_order_relaxed);
   }
 
   /**
@@ -219,10 +219,10 @@ struct pfs_lock
   void set_dirty(pfs_dirty_state *copy_ptr)
   {
     /* Do not set the version to 0, read the previous value. */
-    uint32 copy= m_version_state.load();
+    uint32 copy= m_version_state.load(std::memory_order_relaxed);
     /* Increment the version, set the DIRTY state */
     uint32 new_val= (copy & VERSION_MASK) + VERSION_INC + PFS_LOCK_DIRTY;
-    m_version_state.store(new_val);
+    m_version_state.store(new_val, std::memory_order_relaxed);
 
     copy_ptr->m_version_state= new_val;
   }
@@ -238,7 +238,7 @@ struct pfs_lock
     /* Keep the same version, set the FREE state */
     uint32 new_val= (copy->m_version_state & VERSION_MASK) + PFS_LOCK_FREE;
 
-    m_version_state.store(new_val);
+    m_version_state.store(new_val, std::memory_order_relaxed);
   }
 
   /**
@@ -258,7 +258,7 @@ struct pfs_lock
     /* Keep the same version, set the FREE state */
     uint32 new_val= (copy & VERSION_MASK) + PFS_LOCK_FREE;
 
-    m_version_state.store(new_val);
+    m_version_state.store(new_val, std::memory_order_relaxed);
   }
 
   /**
@@ -268,7 +268,7 @@ struct pfs_lock
   */
   void begin_optimistic_lock(struct pfs_optimistic_state *copy)
   {
-    copy->m_version_state= m_version_state.load();
+    copy->m_version_state= m_version_state.load(std::memory_order_relaxed);
   }
 
   /**
@@ -285,7 +285,7 @@ struct pfs_lock
     if ((copy->m_version_state & STATE_MASK) != PFS_LOCK_ALLOCATED)
       return false;
 
-    version_state= m_version_state.load();
+    version_state= m_version_state.load(std::memory_order_relaxed);
 
     /* Check the version + state has not changed. */
     if (copy->m_version_state != version_state)
@@ -298,7 +298,7 @@ struct pfs_lock
   {
     uint32 version_state;
 
-    version_state= m_version_state.load();
+    version_state= m_version_state.load(std::memory_order_relaxed);
 
     return (version_state & VERSION_MASK);
   }
